@@ -103,10 +103,7 @@ def main():
     parser.add_argument('--check', action='store_true', help='check if paths exist in current directory')
     
     args = parser.parse_args()
-
-    expand=args.expand
-    if args.check:
-        expand=True
+    expand = args.expand or args.check
     
     # Create a PATH list for file A
     paths_a = read_paths(args.file_a, expand)
