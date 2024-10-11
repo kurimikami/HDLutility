@@ -30,17 +30,18 @@ def resolve_symlink(path):
 def read_paths(filename):
     paths = {}
     linenum = 0
+    # ext_pattern = r"(?<=[$/\w\W])\s*([^'\"\[\];\s]+\.(vhd|v|sv|svh))\b"
     ext_pattern = r"(?:\s*[=|'|\"|\[|+]\s*)([^'\"=\s]+\.(?:vhd|sv|v|svh))\b(?:\s*\w*)"
     
     with open(filename, 'r') as file:
         for line in file:
             linenum += 1
     
-            fullpath = re.findall(ext_pattern, clean_path(line))
-            if fullpath:
-                fullpath = fullpath[0]
-                filename = os.path.basename(fullpath)
-                paths[filename] = {'LN': str(linenum).rjust(10), 'PATH': resolve_symlink(fullpath)}
+            fullpaths = re.findall(ext_pattern, clean_path(line))
+            if fullpaths:
+                for fullpath in fullpaths :
+                    filename = os.path.basename(fullpath)
+                    paths[filename] = {'LN': str(linenum).rjust(10), 'PATH': resolve_symlink(fullpath)}
 
     return paths
 
