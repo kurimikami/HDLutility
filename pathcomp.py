@@ -17,19 +17,17 @@ def clean_path(line):
     line = line.replace('\\', '')  
     return line
 
-def find_vhdl_files(directory):
-    vhdl_extensions = {'.vhd', '.v', '.svh', '.sv'}
+def find_files(directory, extensions = {'.vhd', '.v', '.svh', '.sv'}):
     found_files = []
 
     for root, dirs, files in os.walk(directory):
         for filename in files:
-            if os.path.splitext(filename)[1] in vhdl_extensions:
+            if os.path.splitext(filename)[1] in extensions:
                 found_files.append(resolve_symlink(os.path.join(root, filename)))
 
     return found_files
 
 def resolve_symlink(path, expand=False):
-
     try:
         # Expand environment variables
         if expand:
@@ -89,6 +87,12 @@ def export_paths(paths_a):
     for filename, fullpath in paths_a.items():
         print(paths_a[filename]['LN'] + ' ' + paths_a[filename]['PATH'])
 
+def check_existence(paths_a):
+    found_files = find_files(os.getcwd(), {'.vhd', '.v', '.svh', '.sv'})
+    for filename, fullpath in paths_a.items():
+        if filename not in found_files:
+            print(Red   + '#NF A :' + paths_a[filename]['LN'] + ' ' + paths_a[filename]['PATH'])
+
 # Main function
 def main():
     parser = argparse.ArgumentParser(description="File PATH comparison tool")
@@ -96,23 +100,32 @@ def main():
     parser.add_argument('file_b', nargs='?', help='file B', default=None)
     parser.add_argument('--export', action='store_true', help='print paths of file A')
     parser.add_argument('--expand', action='store_true', help='expand environment variables in file paths')
+    parser.add_argument('--check', action='store_true', help='check if paths exist in current directory')
     
     args = parser.parse_args()
 
+    expand=args.expand
+    if args.check:
+        expand=True
+    
     # Create a PATH list for file A
-    paths_a = read_paths(args.file_a, expand=args.expand)
+    paths_a = read_paths(args.file_a, expand)
 
     if args.export:
         # If --export is specified, export only the paths from file A
         export_paths(paths_a)
-    else:
-        # If --export is not specified, compare file A with file B
-        if args.file_b:
-            paths_b = read_paths(args.file_b, expand=args.expand)
-            compare_paths(paths_a, paths_b) 
+        
+        if args.check:
+            check_existence(paths_a)
+
         else:
-            print("Error")
-            parser.print_usage()
+            # If --export is not specified, compare file A with file B
+            if args.file_b:
+                paths_b = read_paths(args.file_b, expand)
+                compare_paths(paths_a, paths_b) 
+            else:
+                print("Error")
+                parser.print_usage()
 
 if __name__ == "__main__":
     main()
