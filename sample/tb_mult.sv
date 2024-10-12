@@ -29,11 +29,12 @@ module tb_mult;
     /*-------------------------------------------
     Test
     -------------------------------------------*/
-   initial begin
-      $dumpfile("dump.vcd");
-      $dumpvars();
-   end
-initial begin
+    initial begin
+        $dumpfile("dump.vcd");
+        $dumpvars();
+    end
+    
+    initial begin
 		_urandom = $urandom(1);
         rstn = 1'b1;
         clk = 1'b1;
