@@ -36,14 +36,16 @@ def resolve_symlink(path, expand=False):
         
         real_path = os.path.realpath(path)
         return real_path
+    
     except Exception as e:
         return str(e)
 
 # Read the file and create a cleaned-up PATH list
-def read_paths(filename, expand=False):
+def read_paths(filename, expand=False, export=False):
     paths = {}
     linenum = 0
     file_cnt = 0
+
     ext_pattern = r"(?<=[$/\w\W])\s*([^'\"\[\];\s]+\.(vhd|v|sv|svh))\b"
     # ext_pattern = r"(?:\s*[=|'|\"|\[|+]\s*)([^'\"=\s]+\.(?:vhd|sv|v|svh))\b(?:\s*\w*)"
 
@@ -64,6 +66,9 @@ def read_paths(filename, expand=False):
                             print(Yellow + '#REPL : ' + Black + basename + '(' + filename + ')')
                         paths[basename] = {'LN': '\(' + str(linenum).rjust(10) + '\)', 'PATH': resolve_symlink(fullpath, expand)}
                         file_cnt += 1
+                else:
+                    if(export):
+                        print('>> ' + line)
     except IOError as e:
         print(f"Error: Unable to read file '{filename}'. {str(e)}")
 
@@ -101,7 +106,6 @@ def export_paths(paths_a):
     for basename, fullpath in paths_a.items():
         print(paths_a[basename]['LN'] + ' ' + paths_a[basename]['PATH'])
 
-
 def check_existence(paths_a,dir_path):
     paths = {}
     matched_cnt = 0
@@ -111,6 +115,7 @@ def check_existence(paths_a,dir_path):
 
     for path in found_files:
         paths[os.path.basename(path)] = path
+
     for basename, fullpath in paths_a.items():
         if basename not in found_files:
             print(Red   + '#NF A :' + paths_a[basename]['LN'] + ' ' + paths_a[basename]['PATH'])
@@ -135,7 +140,7 @@ def main():
     expand = args.expand or args.check
     
     # Create a PATH list for file A
-    path_cnt_a, paths_a = read_paths(args.file_a, expand)
+    path_cnt_a, paths_a = read_paths(args.file_a, expand, args.export)
 
     if args.export:
         # If --export is specified, export only the paths from file A
