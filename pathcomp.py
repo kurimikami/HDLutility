@@ -2,6 +2,7 @@
 import argparse
 import re
 import os
+import sys
 
 Black  = "\033[0m"
 Red    = "\033[31m"
@@ -33,7 +34,7 @@ def resolve_symlink(path, expand=False):
         if expand:
             path = os.path.expandvars(path)
         # Get the actual path that the link ultimately points to (file/directory)
-        
+
         real_path = os.path.realpath(path)
         return real_path
     
@@ -68,9 +69,9 @@ def read_paths(filename, expand=False, export=False):
                         file_cnt += 1
                 else:
                     if(export):
-                        print('>> ' + line)
+                        print( line , file=sys.stderr)
     except IOError as e:
-        print(f"Error: Unable to read file '{filename}'. {str(e)}")
+        print(f"Error: Unable to read file '{filename}'. {str(e)}", file=sys.stderr)
 
     return [file_cnt, paths]
 
@@ -129,6 +130,7 @@ def check_existence(paths_a,dir_path):
 
 # Main function
 def main():
+    # pathcomp.py > stdout.txt 2 > stderr.txt
     parser = argparse.ArgumentParser(description="File PATH comparison tool")
     parser.add_argument('file_a', help='file A')
     parser.add_argument('file_b', nargs='?', help='file B', default=None)
