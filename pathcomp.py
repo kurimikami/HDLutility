@@ -5,7 +5,7 @@ import os
 
 Black  = "\033[0m"
 Red    = "\033[31m"
-Yellow = "\033[33m"
+Yellow = "\033[33m" 
 Cyan   = "\033[36m"
 
 # Remove comments, backslashes, and whitespace
