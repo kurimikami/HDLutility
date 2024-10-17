@@ -2,7 +2,6 @@
 import argparse
 import re
 import os
-import sys
 
 Black  = "\033[0m"
 Red    = "\033[31m"
@@ -20,8 +19,8 @@ def clean_path(line):
 
 def find_files(directory, extensions = {'.vhd', '.v', '.svh', '.sv'}):
     found_files = []
-
-    for root, dirs, files in os.walk(directory):
+    directory = os.path.expandvars(directory)
+    for root, dirs, files in os.walk(directory, followlinks=True):
         for filename in files:
             if os.path.splitext(filename)[1] in extensions:
                 found_files.append(resolve_symlink(os.path.join(root, filename)))
@@ -34,7 +33,7 @@ def resolve_symlink(path, expand=False):
         if expand:
             path = os.path.expandvars(path)
         # Get the actual path that the link ultimately points to (file/directory)
-
+        
         real_path = os.path.realpath(path)
         return real_path
     
@@ -47,8 +46,8 @@ def read_paths(filename, expand=False, export=False):
     linenum = 0
     file_cnt = 0
 
-    ext_pattern = r"(?<=[$/\w\W])\s*([^'\"\[\];\s]+\.(vhd|v|sv|svh))\b"
-    # ext_pattern = r"(?:\s*[=|'|\"|\[|+]\s*)([^'\"=\s]+\.(?:vhd|sv|v|svh))\b(?:\s*\w*)"
+    # ext_pattern = r"(?<=[$/\w\W])\s*([^'\"\[\];\s]+\.(vhd|v|sv|svh))\b"
+    ext_pattern = r"(?:\s*[=|'|\"|\[|+\s]*)?([^'\"=\s]+\.(?:vhd|sv|v|svh))\b(?:\s*\w*)"
 
     if not os.path.exists(filename):
         print(f"Error: File '{filename}' does not exist.")
@@ -58,20 +57,19 @@ def read_paths(filename, expand=False, export=False):
         with open(filename, 'r') as file:
             for line in file:
                 linenum += 1
-        
                 fullpaths = re.findall(ext_pattern, clean_path(line))
                 if fullpaths:
                     for fullpath in fullpaths :
                         basename = os.path.basename(fullpath)
                         if basename in paths :
                             print(Yellow + '#REPL : ' + Black + basename + '(' + filename + ')')
-                        paths[basename] = {'LN': '\(' + str(linenum).rjust(10) + '\)', 'PATH': resolve_symlink(fullpath, expand)}
+                        paths[basename] = {'LN': '(' + str(linenum).rjust(10) + ')', 'PATH': resolve_symlink(fullpath, expand)}
                         file_cnt += 1
                 else:
                     if(export):
-                        print( line , file=sys.stderr)
+                        print('>> ' + line)
     except IOError as e:
-        print(f"Error: Unable to read file '{filename}'. {str(e)}", file=sys.stderr)
+        print(f"Error: Unable to read file '{filename}'. {str(e)}")
 
     return [file_cnt, paths]
 
@@ -104,7 +102,7 @@ def compare_paths(paths_a, paths_b):
 # Export information from file A
 def export_paths(paths_a):
     # print("Paths of files listed in file A:")
-    for basename, fullpath in paths_a.items():
+    for basename in paths_a:
         print(paths_a[basename]['LN'] + ' ' + paths_a[basename]['PATH'])
 
 def check_existence(paths_a,dir_path):
@@ -113,15 +111,17 @@ def check_existence(paths_a,dir_path):
     NF_cnt = 0
 
     found_files = find_files(dir_path, {'.vhd', '.v', '.svh', '.sv'})
-
+    print('<<' + dir_path)
     for path in found_files:
+        # path = os.path.realpath(path)
         paths[os.path.basename(path)] = path
+        print(os.path.basename(path) + ' <<' + path)
 
-    for basename, fullpath in paths_a.items():
-        if basename not in found_files:
+    for basename in paths_a:
+        if basename not in paths:
             print(Red   + '#NF A :' + paths_a[basename]['LN'] + ' ' + paths_a[basename]['PATH'])
             NF_cnt += 1
-            if paths.get(basename, None):
+            if basename in paths:
                 print(Black   + '#EX ? :          ' +  ' ' + paths[basename])
         else:
             matched_cnt += 1
@@ -130,7 +130,6 @@ def check_existence(paths_a,dir_path):
 
 # Main function
 def main():
-    # pathcomp.py > stdout.txt 2 > stderr.txt
     parser = argparse.ArgumentParser(description="File PATH comparison tool")
     parser.add_argument('file_a', help='file A')
     parser.add_argument('file_b', nargs='?', help='file B', default=None)
@@ -139,7 +138,7 @@ def main():
     parser.add_argument('--check', nargs='?', const=os.getcwd(), help='check if paths exist in specified directory')
     
     args = parser.parse_args()
-    expand = args.expand or args.check
+    expand = args.expand or (args.check != '')
     
     # Create a PATH list for file A
     path_cnt_a, paths_a = read_paths(args.file_a, expand, args.export)
@@ -148,13 +147,13 @@ def main():
         # If --export is specified, export only the paths from file A
         export_paths(paths_a)
                 
-        print("-------------------------------------------------------------")
+        print(Black + "-------------------------------------------------------------")
         print("The " + str(path_cnt_a).rjust(6) + " paths were found in " +  args.file_a)
-
-        if args.check:
+    else:
+        if args.check is not "":
             matched_cnt, NF_cnt = check_existence(paths_a, args.check)
 
-            print("-------------------------------------------------------------")
+            print(Black + "-------------------------------------------------------------")
             print("The " + str(path_cnt_a).rjust(6) + " paths were found in " + args.file_a)
             print("Matched  : " + str(matched_cnt))
             print("Not Found files under ./ : " + str(NF_cnt))
@@ -165,16 +164,16 @@ def main():
                 path_cnt_b, paths_b = read_paths(args.file_b, expand)
                 matched_cnt, UM_cnt, xA_cnt, xB_cnt = compare_paths(paths_a, paths_b)
 
-                print("-------------------------------------------------------------")
+                print(Black + "-------------------------------------------------------------")
                 print("The " + str(path_cnt_a).rjust(6) + " paths were found in " + args.file_a)
                 print("The " + str(path_cnt_b).rjust(6) + " paths were found in " + args.file_b)
                 print("Matched  　: " + str(matched_cnt).rjust(6))
                 print("UnMatched　: " + str(UM_cnt).rjust(6))
                 print("Not Exsit in " + args.file_a + ':' + str(xA_cnt).rjust(6))
                 print("Not Exsit in " + args.file_b + ':' + str(xB_cnt).rjust(6))
-            else:
-                print("Error")
-                parser.print_usage()
-
+            # else:
+            #     print("Error")
+            #     parser.print_usage()
+        print(Black+"")
 if __name__ == "__main__":
     main()
